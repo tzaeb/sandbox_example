@@ -1,0 +1,45 @@
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+      args:
+        UID: ${SANDBOX_UID:-1000}
+        GID: ${SANDBOX_GID:-1000}
+    image: llm-sandbox
+
+    # Keep container alive for exec-based code execution
+    command: ["sleep", "infinity"]
+
+    working_dir: /workspace
+
+    # -- Security hardening --
+    network_mode: none
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+      - /home/sandbox/.config:size=8M
+      - /home/sandbox/.cache:size=8M
+
+    # -- Resource limits --
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+          pids: 64
+        reservations:
+          memory: 64M
+
+    # -- Volumes --
+    # Default workspace mount (override via SANDBOX_WORKDIR env var or CLI)
+    # Mounts the sandbox working directory (or current directory if not set) to /workspace with read-write access
+    # Mounts the ./skills directory to /skills with read-only access
+    # Note: When 'ro' is not specified, the default mount mode is read-write (rw)
+    volumes:
+      - ${SANDBOX_WORKDIR:-/tmp/sandbox_workspace}:/workspace
+      - ./skills:/skills:ro

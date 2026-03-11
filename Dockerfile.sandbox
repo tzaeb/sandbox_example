@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+# Minimal hardened sandbox for LLM code execution.
+# Runs as non-root user with no unnecessary packages.
+
+# UID/GID must match the host user that owns the mounted workspace.
+# Override at build time: docker compose build --build-arg UID=$(id -u) --build-arg GID=$(id -g)
+ARG UID=1000
+ARG GID=1000
+
+RUN groupadd -g ${GID} sandbox && useradd -u ${UID} -g sandbox -m -s /bin/bash sandbox
+
+# Common data-science / utility packages the LLM might need.
+# Keep this lean — add more via mounted requirements or pip at runtime.
+RUN pip install --no-cache-dir numpy pandas matplotlib
+
+# Workspace where mounted host folders will appear
+RUN mkdir -p /workspace && chown sandbox:sandbox /workspace
+WORKDIR /workspace
+
+USER sandbox
+
+CMD ["sleep", "infinity"]
